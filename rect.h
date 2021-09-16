@@ -1,16 +1,29 @@
-
-ifndef __RECT_H__
+#ifndef __RECT_H__
 #define __RECT_H__
 
-include "vec2.h"
+#include "vec2.h"
 
 #include <cmath>
 
 class rect {
 
-    rect(double x, double y, double width, double height) {
-        this->_origin = vec2d(x,y);
+public:
+    rect() {
+        // empty
+    }
+
+    rect(const vec2d& origin, double width, double height) {
+        this->_origin = origin;
         this->_size = vec2d(width, height);
+    }
+
+    rect(double x, double y, double width, double height) {
+        this->_origin = vec2d(x, y);
+        this->_size = vec2d(width, height);
+    }
+
+    void moveTo(const vec2d& pos) {
+        this->_origin = pos;
     }
 
     void moveTo(double x, double y) {
@@ -37,7 +50,13 @@ class rect {
         this->_size = vec2d(width, height);
     }
 
+    const vec2d& getOrigin() {
+        return this->_origin;
+    }
+
 private:
     vec2d _origin;
     vec2d _size;
 };
+
+#endif
