@@ -2,30 +2,30 @@
 
 #include <cmath>
 #include <iostream>
-QPointF interpolateBetweenU(double t, double y_sp0, double y_sp1, const tk::spline& sp0, const tk::spline& sp1)
+vec2d interpolateBetweenU(double t, double y_sp0, double y_sp1, const tk::spline& sp0, const tk::spline& sp1)
 {
-    QPointF p0(sp0(y_sp0), y_sp0);
-    QPointF p1(sp1(y_sp1), y_sp1);
+    vec2d p0(sp0(y_sp0), y_sp0);
+    vec2d p1(sp1(y_sp1), y_sp1);
     return (1 - t) * p0 + t * p1;
 }
-QPointF interpolateBetweenV(double t, double x_sp0, double x_sp1, const tk::spline& sp0, const tk::spline& sp1)
+vec2d interpolateBetweenV(double t, double x_sp0, double x_sp1, const tk::spline& sp0, const tk::spline& sp1)
 {
-    QPointF p0(x_sp0, sp0(x_sp0));
-    QPointF p1(x_sp1, sp1(x_sp1));
+    vec2d p0(x_sp0, sp0(x_sp0));
+    vec2d p1(x_sp1, sp1(x_sp1));
     return (1 - t) * p0 + t * p1;
 }
 // corner parameters are numbered according to XY variation, for instance, corner00 is smaller x and smaller y, corner01
 // is smaller x and bigger y and so on..
-QPointF generateSplinePatch(double nu, double nv, const tk::spline& spU0, const tk::spline& spU1,
-                            const tk::spline& spV0, const tk::spline& spV1, const QPointF& corner00,
-                            const QPointF& corner01, const QPointF& corner10, const QPointF& corner11)
+vec2d generateSplinePatch(double nu, double nv, const tk::spline& spU0, const tk::spline& spU1,
+                            const tk::spline& spV0, const tk::spline& spV1, const vec2d& corner00,
+                            const vec2d& corner01, const vec2d& corner10, const vec2d& corner11)
 {
     // interpolate patches using Coon's Patch
-    QPointF result;
-    QPointF B =
+    vec2d result;
+    vec2d B =
         corner00 * (1 - nv) * (1 - nu) + corner01 * nv * (1 - nu) + corner10 * (1 - nv) * nu + corner11 * nv * nu;
 
-    QPointF Lc = interpolateBetweenU(nu, corner00.y() * (1 - nv) + nv * corner01.y(),
+    vec2d Lc = interpolateBetweenU(nu, corner00.y() * (1 - nv) + nv * corner01.y(),
                                      corner10.y() * (1 - nv) + nv * corner11.y(), spU0, spU1);
     result = Lc;
     result += interpolateBetweenV(nv, corner00.x() * (1 - nu) + nu * corner10.x(),
@@ -34,10 +34,10 @@ QPointF generateSplinePatch(double nu, double nv, const tk::spline& spU0, const 
     return result;
 }
 
-ParametricSurfaceGrid::ParametricSurfaceGrid(const QPointF& pixelOrigin, double sizeWidth, double sizeHeight,
+ParametricSurfaceGrid::ParametricSurfaceGrid(const vec2d& pixelOrigin, double sizeWidth, double sizeHeight,
                                              int gridXControlPointResolution, int gridYControlPointResolution)
 {
-    _state.rectangle = QRectF(pixelOrigin, QSize(sizeWidth, sizeHeight));
+    _state.rectangle = rect(pixelOrigin, QSize(sizeWidth, sizeHeight));
     _gridXControlPointResolution = std::max(5, gridXControlPointResolution);
     _gridYControlPointResolution = std::max(5, gridYControlPointResolution);
 
@@ -47,49 +47,49 @@ ParametricSurfaceGrid::ParametricSurfaceGrid(const QPointF& pixelOrigin, double 
 void ParametricSurfaceGrid::setPixelWidth(int width)
 {
 
-    _state.rectangle.setWidth(std::max(20, width));
+    _state.rectangle.setWidth(std::max(1, width));
     createGridData();
 }
 void ParametricSurfaceGrid::setPixelHeight(int height)
 {
-    _state.rectangle.setHeight(std::max(20, height));
+    _state.rectangle.setHeight(std::max(1, height));
     createGridData();
 }
 
 void ParametricSurfaceGrid::setPixelSize(int width, int height)
 {
-    _state.rectangle.setSize(QSize(std::max(20, width), std::max(20, height)));
+    _state.rectangle.setSize(QSize(std::max(1, width), std::max(1, height)));
     createGridData();
 }
 
-void ParametricSurfaceGrid::setControlPointPosition(int row, int col, const QPointF& point)
+void ParametricSurfaceGrid::setControlPointPosition(int row, int col, const vec2d& point)
 {
     assert(row < _splinesAlongY.size() && _splinesAlongY[row].getNumPoints() > col);
     assert(col < _splinesAlongX.size() && _splinesAlongX[col].getNumPoints() > row);
-    QPointF oldPosition = controlPointPosition(row, col);
+    vec2d oldPosition = controlPointPosition(row, col);
     _splinesAlongY[row].set_point(col, point.x(), point.y());
     _splinesAlongX[col].set_point(row, point.y(), point.x());
-    QPointF newPosition = controlPointPosition(row, col);
+    vec2d newPosition = controlPointPosition(row, col);
 }
 
-void ParametricSurfaceGrid::moveControlPoint(int row, int col, const QPointF& delta)
+void ParametricSurfaceGrid::moveControlPoint(int row, int col, const vec2d& delta)
 {
     assert(row < _splinesAlongY.size() && _splinesAlongY[row].getNumPoints() > col);
     assert(col < _splinesAlongX.size() && _splinesAlongX[col].getNumPoints() > row);
-    QPointF oldPosition = controlPointPosition(row, col);
+    vec2d oldPosition = controlPointPosition(row, col);
     _splinesAlongY[row].move_point(col, delta.x(), delta.y());
     _splinesAlongX[col].move_point(row, delta.y(), delta.x());
-    QPointF newPosition = controlPointPosition(row, col);
+    vec2d newPosition = controlPointPosition(row, col);
 }
 
-QPointF ParametricSurfaceGrid::controlPointPosition(int row, int col)
+vec2d ParametricSurfaceGrid::controlPointPosition(int row, int col)
 {
     assert(row < _splinesAlongY.size() && _splinesAlongY[row].getNumPoints() > col);
     assert(col < _splinesAlongX.size() && _splinesAlongX[col].getNumPoints() > row);
 
     double x, y;
     _splinesAlongY[row].get_point(col, x, y);
-    return QPointF(x, y);
+    return vec2d(x, y);
 }
 
 const std::vector<double>& ParametricSurfaceGrid::generateSurfacePoints()
@@ -97,13 +97,13 @@ const std::vector<double>& ParametricSurfaceGrid::generateSurfacePoints()
     int width = _state.rectangle.width();
     int height = _state.rectangle.height();
 
-    QPointF gridOrigin = pixelOrigin();
+    vec2d gridOrigin = pixelOrigin();
     _state.surfacePoints.resize(width * height * 2);
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             double u = x / (double)width;
             double v = y / (double)height;
-            QPointF surfacepoint = surfacePoint(u, v);
+            vec2d surfacepoint = surfacePoint(u, v);
             _state.surfacePoints[2 * y * width + 2 * x + 0] = surfacepoint.x() + gridOrigin.x();
             _state.surfacePoints[2 * y * width + 2 * x + 1] = surfacepoint.y() + gridOrigin.y();
         }
@@ -136,7 +136,7 @@ void ParametricSurfaceGrid::rebuildGridData(int gridXRes, int gridYRes, int grid
         for (int i = 0; i < numControlPointsX; ++i) {
             int xcoord = std::min(newWidth, i * newResX);
             double u = xcoord / (double)newWidth;
-            QPointF point = surfacePoint(u, v);
+            vec2d point = surfacePoint(u, v);
             x.push_back(point.x());
             y.push_back(point.y());
         }
@@ -153,7 +153,7 @@ void ParametricSurfaceGrid::rebuildGridData(int gridXRes, int gridYRes, int grid
         for (int i = 0; i < numControlPointsY; ++i) {
             int ycoord = std::min(newHeight, i * newResY);
             double v = ycoord / (double)newHeight;
-            QPointF point = surfacePoint(u, v);
+            vec2d point = surfacePoint(u, v);
             x.push_back(point.y());
             y.push_back(point.x());
         }
@@ -210,7 +210,7 @@ void ParametricSurfaceGrid::createGridData()
     assert(_splinesAlongX.size() == _numControlPointsX);
 }
 
-QPointF ParametricSurfaceGrid::surfacePoint(double u, double v)
+vec2d ParametricSurfaceGrid::surfacePoint(double u, double v)
 {
     // first step is to know which 4 splines to use, depending on where u,v coordinates are
     int width = pixelWidth();
@@ -226,10 +226,10 @@ QPointF ParametricSurfaceGrid::surfacePoint(double u, double v)
     const tk::spline& spU1 = _splinesAlongX[col1];
     const tk::spline& spV0 = _splinesAlongY[row];
     const tk::spline& spV1 = _splinesAlongY[row1];
-    QPointF p00 = controlPointPosition(row, col);
-    QPointF p10 = controlPointPosition(row, col1);
-    QPointF p11 = controlPointPosition(row1, col1);
-    QPointF p01 = controlPointPosition(row1, col);
+    vec2d p00 = controlPointPosition(row, col);
+    vec2d p10 = controlPointPosition(row, col1);
+    vec2d p11 = controlPointPosition(row1, col1);
+    vec2d p01 = controlPointPosition(row1, col);
     double nv = coordRow - row;
     double nu = coordCol - col;
     if (row1 == _splinesAlongY.size() - 1) {
@@ -250,7 +250,7 @@ QPointF ParametricSurfaceGrid::surfacePoint(double u, double v)
     return generateSplinePatch(nu, nv, spU0, spU1, spV0, spV1, p00, p01, p10, p11);
 }
 
-QPointF ParametricSurfaceGrid::surfacePoint(const QPointF& point) { return surfacePoint(point.x(), point.y()); }
+vec2d ParametricSurfaceGrid::surfacePoint(const vec2d& point) { return surfacePoint(point.x(), point.y()); }
 
 void ParametricSurfaceGrid::setGridResolution(int resX, int resY)
 {

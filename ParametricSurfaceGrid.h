@@ -4,10 +4,12 @@
 
 #include "IParametricSurface.h"
 #include "ParametricSurfaceGridAction.h"
+
+#include "rect.h"
 #include "spline.h"
 
 struct State {
-    QRectF rectangle;
+    rect rectangle;
     std::vector<double> surfacePoints;
 };
 
@@ -22,8 +24,8 @@ public:
     // \param gridYControlPointResolution: the pixel resolution of controlpoints in between spacing in Y axis
     ParametricSurfaceGrid(const QPointF& pixelOrigin, double pixelWidth, double pixelHeight,
                           int gridXControlPointResolution, int gridYControlPointResolution);
-    virtual QPointF surfacePoint(double u, double v);
-    virtual QPointF surfacePoint(const QPointF& point);
+    virtual vec2d surfacePoint(double u, double v);
+    virtual vec2d surfacePoint(const vec2d& point);
 
     // Regenerate the grid in the given DPI resolution. This affects pixelWidth() and pixelHeight()
     int pixelWidth() { return _state.rectangle.width(); }
